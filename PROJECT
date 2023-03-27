@@ -1,0 +1,13 @@
+domain: appscode.com
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: aws-peering-connection-operator
+repo: kubedb/aws-peering-connection-operator
+resources:
+- controller: true
+  domain: appscode.com
+  group: db
+  kind: Crossplane
+  version: v1alpha1
+version: "3"

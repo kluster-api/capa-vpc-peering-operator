@@ -19,11 +19,10 @@ package db
 import (
 	"context"
 	"errors"
-	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
-	"k8s.io/klog/v2"
-	"kubedb/aws-peering-connection-operator/pkg/firewall"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
+	kmc "kmodules.xyz/client-go/client"
+	"kubedb/aws-peering-connection-operator/pkg/firewall"
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -57,36 +56,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	//TODO: EKSNodeAdditional may not work, you may need a different security group
-	securityGroupID := managedCP.Status.Network.SecurityGroups[infrav1.SecurityGroupEKSNodeAdditional].ID
+	securityGroupID := managedCP.Status.Network.SecurityGroups[infrav1.SecurityGroupControlPlane].ID
 	if securityGroupID == "" {
 		return ctrl.Result{}, errors.New("no security group id found")
 	}
 	klog.Infof("--------- securityGroupID: %s------------", securityGroupID)
-
-	var routeTables []string
-	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-		if subnet.IsPublic == true {
-			routeTables = append(routeTables, subnet.ID)
-		}
+	sgRule, err := firewall.GetRule(firewall.RuleInfo{
+		Cidr:          "0.0.0.0/0",
+		Region:        managedCP.Spec.Region,
+		SecurityGroup: securityGroupID,
+		Port:          "27017",
+	})
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	destinationCIDR := "0.0.0.0/0"
+	_, _, err = kmc.CreateOrPatch(ctx, r.Client, sgRule, func(_ client.Object, _ bool) client.Object {
+		return sgRule
+	})
+	/*
 
-	for _, tableID := range routeTables {
-		var route upEC2.Route
-		if err := r.Get(ctx, client.ObjectKey{Name: firewall.GetRouteName(tableID, destinationCIDR)}, &route); err != nil && client.IgnoreNotFound(err) == nil {
-			route = *firewall.GetRoute(firewall.RouteInfo{
-				RouteTable:      tableID,
-				Destination:     destinationCIDR,
-				Region:          managedCP.Spec.Region,
-				InternetGateway: *managedCP.Spec.NetworkSpec.VPC.InternetGatewayID,
-			})
-			if er := r.Client.Create(ctx, &route); er != nil {
-				return ctrl.Result{}, er
+		var routeTables []string
+		for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
+			if subnet.IsPublic == true {
+				routeTables = append(routeTables, subnet.ID)
 			}
-			klog.Infof("route: %s created", firewall.GetRouteName(tableID, destinationCIDR))
 		}
-	}
+
+		destinationCIDR := "0.0.0.0/0"
+
+		for _, tableID := range routeTables {
+			var route upEC2.Route
+			if err := r.Get(ctx, client.ObjectKey{Name: firewall.GetRouteName(tableID, destinationCIDR)}, &route); err != nil && client.IgnoreNotFound(err) == nil {
+				route = *firewall.GetRoute(firewall.RouteInfo{
+					RouteTable:      tableID,
+					Destination:     destinationCIDR,
+					Region:          managedCP.Spec.Region,
+					InternetGateway: *managedCP.Spec.NetworkSpec.VPC.InternetGatewayID,
+				})
+				if er := r.Client.Create(ctx, &route); er != nil {
+					return ctrl.Result{}, er
+				}
+				klog.Infof("route: %s created", firewall.GetRouteName(tableID, destinationCIDR))
+			}
+		}
+
+	*/
 
 	return ctrl.Result{}, nil
 }

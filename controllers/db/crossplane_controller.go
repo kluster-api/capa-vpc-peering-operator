@@ -23,7 +23,7 @@ import (
 	"k8s.io/klog/v2"
 	kmc "kmodules.xyz/client-go/client"
 	"kubedb/aws-peering-connection-operator/pkg/firewall"
-	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
+	infrav2 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,11 +56,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	//TODO: EKSNodeAdditional may not work, you may need a different security group
-	securityGroupID := managedCP.Status.Network.SecurityGroups[infrav1.SecurityGroupControlPlane].ID
-	if securityGroupID == "" {
+	sg, found := managedCP.Status.Network.SecurityGroups[infrav2.SecurityGroupNode]
+	if !found {
 		return ctrl.Result{}, errors.New("no security group id found")
 	}
-	klog.Infof("--------- securityGroupID: %s------------", securityGroupID)
+	securityGroupID := sg.ID
 	sgRule, err := firewall.GetRule(firewall.RuleInfo{
 		Cidr:          "0.0.0.0/0",
 		Region:        managedCP.Spec.Region,
@@ -74,6 +74,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	_, _, err = kmc.CreateOrPatch(ctx, r.Client, sgRule, func(_ client.Object, _ bool) client.Object {
 		return sgRule
 	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	klog.Info("Successfully updated sg rules")
+
 	/*
 
 		var routeTables []string

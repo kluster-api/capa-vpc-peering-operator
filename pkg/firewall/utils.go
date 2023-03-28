@@ -6,15 +6,15 @@ import (
 )
 
 func GetRouteName(routeTable, destination string) string {
-	st := fmt.Sprintf("%s_%s", routeTable, destination)
-	st = strings.ReplaceAll(st, ".", "_")
-	st = strings.ReplaceAll(st, "/", "_")
+	st := fmt.Sprintf("%s-%s", routeTable, destination)
+	st = strings.ReplaceAll(st, ".", "-")
+	st = strings.ReplaceAll(st, "/", "-")
 	return st
 }
 
 func GetSGRuleName(securityGroup, cidr, port string) string {
-	st := fmt.Sprintf("%s_%s_%s", securityGroup, cidr, port)
-	st = strings.ReplaceAll(st, ".", "_")
-	st = strings.ReplaceAll(st, "/", "_")
+	st := fmt.Sprintf("%s-%s-%s", securityGroup, cidr, port)
+	st = strings.ReplaceAll(st, ".", "-")
+	st = strings.ReplaceAll(st, "/", "-")
 	return st
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	infrav2 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,4 +45,16 @@ func GetSecurityGroupID(managedCP *ekscontrolplanev1.AWSManagedControlPlane) (st
 	}
 
 	return sg.ID, nil
+}
+
+func GetVpcIDs(ctx context.Context, c client.Client) []string {
+	pcLIst := &upEC2.VPCPeeringConnectionList{}
+	c.List(ctx, pcLIst)
+
+	var idList []string
+
+	for _, pc := range pcLIst.Items {
+		idList = append(idList, pc.GetID())
+	}
+	return idList
 }

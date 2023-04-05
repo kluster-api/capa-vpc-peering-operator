@@ -4,13 +4,14 @@ import (
 	"context"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	kmc "kmodules.xyz/client-go/client"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 )
 
 type RouteInfo struct {
-	RouteTable, Destination, Region, InternetGateway string
+	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
 func GetRoute(routeInfo RouteInfo) *upEC2.Route {
@@ -21,10 +22,10 @@ func GetRoute(routeInfo RouteInfo) *upEC2.Route {
 		},
 		Spec: upEC2.RouteSpec{
 			ForProvider: upEC2.RouteParameters_2{
-				Region:               &routeInfo.Region,
-				RouteTableID:         &routeInfo.RouteTable,
-				DestinationCidrBlock: &routeInfo.Destination,
-				GatewayID:            &routeInfo.InternetGateway,
+				Region:                 &routeInfo.Region,
+				RouteTableID:           &routeInfo.RouteTable,
+				DestinationCidrBlock:   &routeInfo.Destination,
+				VPCPeeringConnectionID: &routeInfo.PeeringConnectionID,
 			},
 		},
 	}
@@ -66,18 +67,6 @@ func GetRule(ruleInfo RuleInfo) (*upEC2.SecurityGroupRule, error) {
 	return &rule, nil
 }
 
-func GetVpcIDs(ctx context.Context, c client.Client) []string {
-	pcLIst := &upEC2.VPCPeeringConnectionList{}
-	c.List(ctx, pcLIst)
-
-	var idList []string
-
-	for _, pc := range pcLIst.Items {
-		idList = append(idList, pc.GetID())
-	}
-	return idList
-}
-
 func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo) error {
 	sgRule, err := GetRule(info)
 	if err != nil {
@@ -90,5 +79,20 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 	if err != nil {
 		return err
 	}
+	klog.Infof("rule created to %s for %s", info.SecurityGroup, info.DestinationCidr)
+	return nil
+}
+
+func CreateRoute(ctx context.Context, c client.Client, info RouteInfo) error {
+	route := GetRoute(info)
+	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
+		return route
+	})
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("route created to table %s for %s", info.RouteTable, info.Destination)
+
 	return nil
 }

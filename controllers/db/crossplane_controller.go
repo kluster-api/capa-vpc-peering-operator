@@ -19,10 +19,10 @@ package db
 import (
 	"context"
 	"errors"
+	errors2 "github.com/pkg/errors"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	kmc "kmodules.xyz/client-go/client"
 	"kubedb/aws-peering-connection-operator/pkg/firewall"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	firstPort = "0"
-	lastPort  = "65535"
+	firstPort      = "0"
+	lastPort       = "65535"
+	cidrAnnotation = "aws.upbound.io/peer-vpc-cidr"
 )
 
 // Reconciler reconciles a Crossplane object
@@ -67,27 +68,44 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 		return ctrl.Result{}, err
 	}
 
-	cidr, found := pc.Spec.ForProvider.Tags["CIDR"]
+	//Note: expected application VPC CIDR range in pc.spec.forProvider.tags[cidr] section, tags is a map[string]*string type
+	//cidr, found := pc.Spec.ForProvider.Tags["cidr"]
+	cidr, found := pc.ObjectMeta.Annotations[cidrAnnotation]
 	if !found {
 		return ctrl.Result{}, errors.New("empty CIDR range in peering connection tags")
 	}
 
-	//TODO: we need the CIDR range of application VPC
-	//frontend will apply a peering connection resource from that we can get
-	//the VPC ID of the application cluster
 	if err := firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{
-		DestinationCidr: *cidr,
+		DestinationCidr: cidr,
 		Region:          managedCP.Spec.Region,
 		SecurityGroup:   sgID,
-		ToPort:          firstPort,
-		FromPort:        lastPort,
+		FromPort:        firstPort,
+		ToPort:          lastPort,
 	}); err != nil {
 		return ctrl.Result{}, err
 	}
-
 	klog.Infof("security group rule created...")
 
-	return ctrl.Result{}, nil
+	var routeTableIDs []string
+	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
+		if subnet.IsPublic == true {
+			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
+		}
+	}
+	var retErr error
+	for _, tableID := range routeTableIDs {
+		if err := firewall.CreateRoute(ctx, r.Client, firewall.RouteInfo{
+			RouteTable:          tableID,
+			Destination:         cidr,
+			Region:              managedCP.Spec.Region,
+			PeeringConnectionID: pc.GetID(),
+		}); err != nil {
+			klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
+			retErr = errors2.Wrap(retErr, err.Error())
+		}
+	}
+
+	return ctrl.Result{}, retErr
 }
 
 //+kubebuilder:rbac:groups=db.appscode.com,resources=crossplanes,verbs=get;list;watch;create;update;patch;delete
@@ -110,62 +128,53 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	pcs := &upEC2.VPCPeeringConnectionList{}
+	if err := r.Client.List(ctx, pcs); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	securityGroupID, err := firewall.GetSecurityGroupID(managedCP)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	sgRule, err := firewall.GetRule(firewall.RuleInfo{
-		DestinationCidr: "0.0.0.0/0",
-		Region:          managedCP.Spec.Region,
-		SecurityGroup:   securityGroupID,
-		ToPort:          firstPort,
-		FromPort:        lastPort,
-	})
-	if err != nil {
-		return ctrl.Result{}, err
+
+	var routeTableIDs []string
+	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
+		if subnet.IsPublic == true {
+			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
+		}
 	}
 
-	_, _, err = kmc.CreateOrPatch(ctx, r.Client, sgRule, func(_ client.Object, _ bool) client.Object {
-		return sgRule
-	})
-	if err != nil {
-		return ctrl.Result{}, err
+	var retErr error
+
+	for _, pc := range pcs.Items {
+		cidr := pc.ObjectMeta.Annotations[cidrAnnotation]
+
+		if err = firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{
+			DestinationCidr: cidr,
+			Region:          managedCP.Spec.Region,
+			SecurityGroup:   securityGroupID,
+			ToPort:          lastPort,
+			FromPort:        firstPort,
+		}); err != nil {
+			klog.Errorf("failed to add rule in %s for %s", securityGroupID, pc.GetID())
+			retErr = errors.Join(retErr, err)
+		}
+
+		for _, tableID := range routeTableIDs {
+			if err = firewall.CreateRoute(ctx, r.Client, firewall.RouteInfo{
+				RouteTable:          tableID,
+				Destination:         cidr,
+				Region:              managedCP.Spec.Region,
+				PeeringConnectionID: pc.GetID(),
+			}); err != nil {
+				klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
+				retErr = errors.Join(retErr, err)
+			}
+		}
 	}
 
-	klog.Info("Successfully updated sg rules")
-
-	firewall.GetVpcIDs(ctx, r.Client)
-
-	/*
-
-		var routeTables []string
-		for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-			if subnet.IsPublic == true {
-				routeTables = append(routeTables, subnet.ID)
-			}
-		}
-
-		destinationCIDR := "0.0.0.0/0"
-
-		for _, tableID := range routeTables {
-			var route upEC2.Route
-			if err := r.Get(ctx, client.ObjectKey{Name: firewall.GetRouteName(tableID, destinationCIDR)}, &route); err != nil && client.IgnoreNotFound(err) == nil {
-				route = *firewall.GetRoute(firewall.RouteInfo{
-					RouteTable:      tableID,
-					Destination:     destinationCIDR,
-					Region:          managedCP.Spec.Region,
-					InternetGateway: *managedCP.Spec.NetworkSpec.VPC.InternetGatewayID,
-				})
-				if er := r.Client.Create(ctx, &route); er != nil {
-					return ctrl.Result{}, er
-				}
-				klog.Infof("route: %s created", firewall.GetRouteName(tableID, destinationCIDR))
-			}
-		}
-
-	*/
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, retErr
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	crossplanev1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
+	"k8s.io/klog/v2"
 	infrav2 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,4 +59,15 @@ func GetVpcIDs(ctx context.Context, c client.Client) []string {
 		idList = append(idList, pc.GetID())
 	}
 	return idList
+}
+
+func CheckCrossplaneCondition(conditions []crossplanev1.Condition) bool {
+
+	for i := range conditions {
+		klog.Infof("condition status: %s", conditions[i].Status)
+		if conditions[i].Status != "True" {
+			return false
+		}
+	}
+	return true
 }

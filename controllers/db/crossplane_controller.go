@@ -19,6 +19,7 @@ package db
 import (
 	"context"
 	"errors"
+	"fmt"
 	errors2 "github.com/pkg/errors"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,6 +59,13 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 	if pc.DeletionTimestamp != nil {
 		return ctrl.Result{}, nil
 	}
+
+	if !firewall.CheckCrossplaneCondition(pc.Status.Conditions) {
+		klog.Infof("%s condition false", pc.GetID())
+		return ctrl.Result{}, errors.New(fmt.Sprintf("%s is not ready", pc.Name))
+	}
+
+	klog.Infof("====================== %s is ready ====================", pc.GetID())
 
 	managedCP, err := firewall.GetManagedControlPlane(ctx, r.Client)
 	if err != nil {
@@ -116,6 +124,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	objKey := req.NamespacedName
 	managedCP := &ekscontrolplanev1.AWSManagedControlPlane{}
 
+	klog.Infof("************event found for: %s************", objKey)
+
 	if err := r.Get(ctx, objKey, managedCP); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -148,6 +158,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	var retErr error
 
 	for _, pc := range pcs.Items {
+		if !firewall.CheckCrossplaneCondition(pc.Status.Conditions) {
+			klog.Infof("%s condition false", pc.GetID())
+			continue
+		}
+		klog.Infof("====================== %s is ready ====================", pc.GetID())
+
 		cidr := pc.ObjectMeta.Annotations[cidrAnnotation]
 
 		if err = firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{

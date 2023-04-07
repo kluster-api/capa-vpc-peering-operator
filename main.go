@@ -20,6 +20,7 @@ import (
 	"flag"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	"os"
+	capaExp "sigs.k8s.io/cluster-api-provider-aws/exp/api/v1beta1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta1"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 
@@ -48,6 +49,7 @@ func init() {
 	utilruntime.Must(infrav1.AddToScheme(scheme))
 	utilruntime.Must(upEC2.AddToScheme(scheme))
 	utilruntime.Must(ekscontrolplanev1.AddToScheme(scheme))
+	utilruntime.Must(capaExp.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

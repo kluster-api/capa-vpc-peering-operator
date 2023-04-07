@@ -3,13 +3,17 @@ module kubedb/aws-peering-connection-operator
 go 1.18
 
 require (
+	github.com/crossplane/crossplane-runtime v0.19.0-rc.0.0.20221012013934-bce61005a175
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
+	github.com/pkg/errors v0.9.1
 	github.com/upbound/provider-aws v0.31.0
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.1
 	k8s.io/klog/v2 v2.80.1
 	kmodules.xyz/client-go v0.25.19
+	sigs.k8s.io/cluster-api v1.2.7
+	sigs.k8s.io/cluster-api-provider-aws v1.5.5
 	sigs.k8s.io/cluster-api-provider-aws/v2 v2.0.2
 	sigs.k8s.io/controller-runtime v0.13.1
 )
@@ -31,7 +35,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/crossplane/crossplane-runtime v0.19.0-rc.0.0.20221012013934-bce61005a175 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
@@ -84,7 +87,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
@@ -120,7 +122,6 @@ require (
 	k8s.io/component-base v0.25.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/utils v0.0.0-20220823124924-e9cbc92d1a73 // indirect
-	sigs.k8s.io/cluster-api v1.2.7 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

@@ -25,9 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	"kubedb/aws-peering-connection-operator/pkg/firewall"
+	capaExp "sigs.k8s.io/cluster-api-provider-aws/exp/api/v1beta1"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -124,8 +128,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	objKey := req.NamespacedName
 	managedCP := &ekscontrolplanev1.AWSManagedControlPlane{}
 
-	klog.Infof("************event found for: %s************", objKey)
-
 	if err := r.Get(ctx, objKey, managedCP); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -150,7 +152,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	var routeTableIDs []string
 	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-		if subnet.IsPublic == true {
+		if subnet.IsPublic == false {
 			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
 		}
 	}
@@ -197,6 +199,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ekscontrolplanev1.AWSManagedControlPlane{}).
+		Watches(
+			&source.Kind{Type: &capaExp.AWSManagedMachinePool{}},
+			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+				reconcileReq := make([]reconcile.Request, 0)
+				managedCP, err := firewall.GetManagedControlPlane(context.TODO(), r.Client)
+				if err != nil {
+					return reconcileReq
+				}
+				reconcileReq = append(reconcileReq, reconcile.Request{NamespacedName: client.ObjectKey{Name: managedCP.Name, Namespace: managedCP.Namespace}})
+				return reconcileReq
+			}),
+		).
 		Complete(r)
 }
 

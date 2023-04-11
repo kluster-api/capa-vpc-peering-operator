@@ -1,2 +1,0 @@
-AWS Peering Connection Operator successfully installed!
-

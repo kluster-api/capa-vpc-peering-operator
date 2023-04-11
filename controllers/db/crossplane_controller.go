@@ -22,9 +22,10 @@ import (
 	"fmt"
 	errors2 "github.com/pkg/errors"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	"kubedb/aws-peering-connection-operator/pkg/firewall"
+	firewall "kubedb/aws-peering-connection-operator/pkg/firewall"
 	capaExp "sigs.k8s.io/cluster-api-provider-aws/exp/api/v1beta1"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,11 +35,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	firstPort      = "0"
-	lastPort       = "65535"
-	cidrAnnotation = "aws.upbound.io/peer-vpc-cidr"
-)
+func getOwnerReference(pc *upEC2.VPCPeeringConnection) []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		{
+			APIVersion: pc.APIVersion,
+			Kind:       pc.Kind,
+			Name:       pc.Name,
+			UID:        pc.UID,
+		},
+	}
+}
 
 // Reconciler reconciles a Crossplane object
 type Reconciler struct {
@@ -81,8 +87,7 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 	}
 
 	//Note: expected application VPC CIDR range in pc.spec.forProvider.tags[cidr] section, tags is a map[string]*string type
-	//cidr, found := pc.Spec.ForProvider.Tags["cidr"]
-	cidr, found := pc.ObjectMeta.Annotations[cidrAnnotation]
+	cidr, found := pc.ObjectMeta.Annotations[firewall.CidrAnnotation]
 	if !found {
 		return ctrl.Result{}, errors.New("empty CIDR range in peering connection tags")
 	}
@@ -91,9 +96,9 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 		DestinationCidr: cidr,
 		Region:          managedCP.Spec.Region,
 		SecurityGroup:   sgID,
-		FromPort:        firstPort,
-		ToPort:          lastPort,
-	}); err != nil {
+		FromPort:        firewall.FirstPort,
+		ToPort:          firewall.LastPort,
+	}, getOwnerReference(pc)); err != nil {
 		return ctrl.Result{}, err
 	}
 	klog.Infof("security group rule created...")
@@ -106,12 +111,12 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 	}
 	var retErr error
 	for _, tableID := range routeTableIDs {
-		if err := firewall.CreateRoute(ctx, r.Client, firewall.RouteInfo{
+		if err := firewall.CreateRouteTableRoute(ctx, r.Client, firewall.RouteInfo{
 			RouteTable:          tableID,
 			Destination:         cidr,
 			Region:              managedCP.Spec.Region,
 			PeeringConnectionID: pc.GetID(),
-		}); err != nil {
+		}, getOwnerReference(pc)); err != nil {
 			klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
 			retErr = errors2.Wrap(retErr, err.Error())
 		}
@@ -145,6 +150,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	if len(pcs.Items) == 0 {
+		return ctrl.Result{}, nil
+	}
+
 	securityGroupID, err := firewall.GetSecurityGroupID(managedCP)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -166,26 +175,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		klog.Infof("====================== %s is ready ====================", pc.GetID())
 
-		cidr := pc.ObjectMeta.Annotations[cidrAnnotation]
+		cidr := pc.ObjectMeta.Annotations[firewall.CidrAnnotation]
 
 		if err = firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{
 			DestinationCidr: cidr,
 			Region:          managedCP.Spec.Region,
 			SecurityGroup:   securityGroupID,
-			ToPort:          lastPort,
-			FromPort:        firstPort,
-		}); err != nil {
+			ToPort:          firewall.LastPort,
+			FromPort:        firewall.FirstPort,
+		}, getOwnerReference(&pc)); err != nil {
 			klog.Errorf("failed to add rule in %s for %s", securityGroupID, pc.GetID())
 			retErr = errors.Join(retErr, err)
 		}
 
 		for _, tableID := range routeTableIDs {
-			if err = firewall.CreateRoute(ctx, r.Client, firewall.RouteInfo{
+			if err = firewall.CreateRouteTableRoute(ctx, r.Client, firewall.RouteInfo{
 				RouteTable:          tableID,
 				Destination:         cidr,
 				Region:              managedCP.Spec.Region,
 				PeeringConnectionID: pc.GetID(),
-			}); err != nil {
+			}, getOwnerReference(&pc)); err != nil {
 				klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
 				retErr = errors.Join(retErr, err)
 			}

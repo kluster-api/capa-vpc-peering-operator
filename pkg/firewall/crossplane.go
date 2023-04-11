@@ -1,3 +1,19 @@
+/*
+Copyright 2023.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package firewall
 
 import (
@@ -10,15 +26,22 @@ import (
 	"strconv"
 )
 
+const (
+	FirstPort      = "0"
+	LastPort       = "65535"
+	CidrAnnotation = "aws.upbound.io/peer-vpc-cidr"
+)
+
 type RouteInfo struct {
 	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
-func GetRoute(routeInfo RouteInfo) *upEC2.Route {
+func GetRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *upEC2.Route {
 	var route upEC2.Route
 	route = upEC2.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
+			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
+			OwnerReferences: ownerRef,
 		},
 		Spec: upEC2.RouteSpec{
 			ForProvider: upEC2.RouteParameters_2{
@@ -36,7 +59,7 @@ type RuleInfo struct {
 	DestinationCidr, Region, SecurityGroup, ToPort, FromPort string
 }
 
-func GetRule(ruleInfo RuleInfo) (*upEC2.SecurityGroupRule, error) {
+func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*upEC2.SecurityGroupRule, error) {
 	var rule upEC2.SecurityGroupRule
 	toPort, err := strconv.ParseFloat(ruleInfo.ToPort, 64)
 	if err != nil {
@@ -50,7 +73,8 @@ func GetRule(ruleInfo RuleInfo) (*upEC2.SecurityGroupRule, error) {
 
 	rule = upEC2.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
+			Name:            GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
+			OwnerReferences: ownerRef,
 		},
 		Spec: upEC2.SecurityGroupRuleSpec{
 			ForProvider: upEC2.SecurityGroupRuleParameters_2{
@@ -67,8 +91,8 @@ func GetRule(ruleInfo RuleInfo) (*upEC2.SecurityGroupRule, error) {
 	return &rule, nil
 }
 
-func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo) error {
-	sgRule, err := GetRule(info)
+func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
+	sgRule, err := GetRule(info, ownerRef)
 	if err != nil {
 		return err
 	}
@@ -83,8 +107,8 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 	return nil
 }
 
-func CreateRoute(ctx context.Context, c client.Client, info RouteInfo) error {
-	route := GetRoute(info)
+func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
+	route := GetRoute(info, ownerRef)
 	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})
@@ -93,6 +117,28 @@ func CreateRoute(ctx context.Context, c client.Client, info RouteInfo) error {
 	}
 
 	klog.Infof("route created to table %s for %s", info.RouteTable, info.Destination)
+
+	return nil
+}
+
+type VPCIdentifier struct {
+	Name, Cidr string
+}
+
+func CheckCIDRConflict(ctx context.Context, c client.Client, ownVPC VPCIdentifier) error {
+	vpcs := []VPCIdentifier{ownVPC}
+	pcs := &upEC2.VPCPeeringConnectionList{}
+
+	err := c.List(ctx, pcs)
+	if err != nil {
+		return err
+	}
+
+	for _, pc := range pcs.Items {
+		if len(pc.Annotations[CidrAnnotation]) > 0 {
+			vpcs = append(vpcs, VPCIdentifier{Name: *pc.Spec.ForProvider.PeerVPCID, Cidr: pc.Annotations[CidrAnnotation]})
+		}
+	}
 
 	return nil
 }

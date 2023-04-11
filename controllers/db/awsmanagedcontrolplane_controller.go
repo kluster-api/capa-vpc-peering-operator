@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// Reconciler reconciles a Crossplane object
-type Reconciler struct {
+// AWSManagedControlPlaneReconciler reconciles a Crossplane object
+type AWSManagedControlPlaneReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -42,7 +42,7 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=db.appscode.com,resources=crossplanes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=db.appscode.com,resources=crossplanes/finalizers,verbs=update
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AWSManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	objKey := req.NamespacedName
 	managedCP := &ekscontrolplanev1.AWSManagedControlPlane{}
 
@@ -118,7 +118,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AWSManagedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ekscontrolplanev1.AWSManagedControlPlane{}).
 		Watches(

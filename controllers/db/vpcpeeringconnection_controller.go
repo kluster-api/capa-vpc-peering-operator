@@ -29,13 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PCReconciler reconciles a crossplane vpc peering connection object
-type PCReconciler struct {
+// VPCPeeringConnectionReconciler reconciles a crossplane vpc peering connection object
+type VPCPeeringConnectionReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	objKey := req.NamespacedName
 	pc := &upEC2.VPCPeeringConnection{}
 
@@ -82,7 +82,7 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 
 	var routeTableIDs []string
 	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-		if subnet.IsPublic == true {
+		if subnet.IsPublic == false {
 			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
 		}
 	}
@@ -107,7 +107,7 @@ func (r PCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Res
 //+kubebuilder:rbac:groups=db.appscode.com,resources=crossplanes/finalizers,verbs=update
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *PCReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *VPCPeeringConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&upEC2.VPCPeeringConnection{}).
 		Complete(r)

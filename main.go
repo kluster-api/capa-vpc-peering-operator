@@ -94,14 +94,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&dbcontrollers.PCReconciler{
+	if err = (&dbcontrollers.VPCPeeringConnectionReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VPCPeeringConnection")
 	}
 
-	if err = (&dbcontrollers.Reconciler{
+	if err = (&dbcontrollers.AWSManagedControlPlaneReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

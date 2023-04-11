@@ -1,11 +1,11 @@
 /*
-Copyright 2023.
+Copyright AppsCode Inc. and Contributors
 
-Licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the AppsCode Community License 1.0.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://github.com/appscode/licenses/raw/1.0.0/AppsCode-Community-1.0.0.md
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,12 +18,13 @@ package firewall
 
 import (
 	"context"
-	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
+	"strconv"
+
+	ec2api "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
-	kmc "kmodules.xyz/client-go/client"
+	cu "kmodules.xyz/client-go/client"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 const (
@@ -36,15 +37,15 @@ type RouteInfo struct {
 	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
-func GetRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *upEC2.Route {
-	var route upEC2.Route
-	route = upEC2.Route{
+func GetRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ec2api.Route {
+	var route ec2api.Route
+	route = ec2api.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
 		},
-		Spec: upEC2.RouteSpec{
-			ForProvider: upEC2.RouteParameters_2{
+		Spec: ec2api.RouteSpec{
+			ForProvider: ec2api.RouteParameters_2{
 				Region:                 &routeInfo.Region,
 				RouteTableID:           &routeInfo.RouteTable,
 				DestinationCidrBlock:   &routeInfo.Destination,
@@ -59,8 +60,8 @@ type RuleInfo struct {
 	DestinationCidr, Region, SecurityGroup, ToPort, FromPort string
 }
 
-func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*upEC2.SecurityGroupRule, error) {
-	var rule upEC2.SecurityGroupRule
+func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.SecurityGroupRule, error) {
+	var rule ec2api.SecurityGroupRule
 	toPort, err := strconv.ParseFloat(ruleInfo.ToPort, 64)
 	if err != nil {
 		return nil, err
@@ -71,13 +72,13 @@ func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*upEC2.Securi
 	protocol := "tcp"
 	typ := "ingress"
 
-	rule = upEC2.SecurityGroupRule{
+	rule = ec2api.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
 			OwnerReferences: ownerRef,
 		},
-		Spec: upEC2.SecurityGroupRuleSpec{
-			ForProvider: upEC2.SecurityGroupRuleParameters_2{
+		Spec: ec2api.SecurityGroupRuleSpec{
+			ForProvider: ec2api.SecurityGroupRuleParameters_2{
 				Region:          &ruleInfo.Region,
 				CidrBlocks:      []*string{&ruleInfo.DestinationCidr},
 				ToPort:          &toPort,
@@ -97,7 +98,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 		return err
 	}
 
-	_, _, err = kmc.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
+	_, _, err = cu.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
 		return sgRule
 	})
 	if err != nil {
@@ -109,7 +110,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 
 func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
 	route := GetRoute(info, ownerRef)
-	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
+	_, _, err := cu.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})
 	if err != nil {
@@ -127,7 +128,7 @@ type VPCIdentifier struct {
 
 func CheckCIDRConflict(ctx context.Context, c client.Client, ownVPC VPCIdentifier) error {
 	vpcs := []VPCIdentifier{ownVPC}
-	pcs := &upEC2.VPCPeeringConnectionList{}
+	pcs := &ec2api.VPCPeeringConnectionList{}
 
 	err := c.List(ctx, pcs)
 	if err != nil {

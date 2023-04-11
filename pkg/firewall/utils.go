@@ -1,11 +1,11 @@
 /*
-Copyright 2023.
+Copyright AppsCode Inc. and Contributors
 
-Licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the AppsCode Community License 1.0.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://github.com/appscode/licenses/raw/1.0.0/AppsCode-Community-1.0.0.md
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	crossplanev1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +29,6 @@ import (
 	infrav2 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 func GetRouteName(routeTable, destination string) string {
@@ -79,7 +80,6 @@ func GetVpcIDs(ctx context.Context, c client.Client) []string {
 }
 
 func CheckCrossplaneCondition(conditions []crossplanev1.Condition) bool {
-
 	for i := range conditions {
 		klog.Infof("condition status: %s", conditions[i].Status)
 		if conditions[i].Status != "True" {

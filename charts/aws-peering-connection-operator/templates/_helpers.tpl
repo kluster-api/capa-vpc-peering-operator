@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "aws-peering-connection-operator.name" -}}
+{{- define "capa-vpc-peering-operator.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "aws-peering-connection-operator.fullname" -}}
+{{- define "capa-vpc-peering-operator.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "aws-peering-connection-operator.chart" -}}
+{{- define "capa-vpc-peering-operator.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "aws-peering-connection-operator.labels" -}}
-helm.sh/chart: {{ include "aws-peering-connection-operator.chart" . }}
-{{ include "aws-peering-connection-operator.selectorLabels" . }}
+{{- define "capa-vpc-peering-operator.labels" -}}
+helm.sh/chart: {{ include "capa-vpc-peering-operator.chart" . }}
+{{ include "capa-vpc-peering-operator.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "aws-peering-connection-operator.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "aws-peering-connection-operator.name" . }}
+{{- define "capa-vpc-peering-operator.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "capa-vpc-peering-operator.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "aws-peering-connection-operator.serviceAccountName" -}}
+{{- define "capa-vpc-peering-operator.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "aws-peering-connection-operator.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "capa-vpc-peering-operator.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}

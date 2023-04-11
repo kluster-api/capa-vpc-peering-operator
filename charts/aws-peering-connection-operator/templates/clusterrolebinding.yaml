@@ -1,12 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "aws-peering-connection-operator.fullname" . }}
+  name: {{ include "capa-vpc-peering-operator.fullname" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "aws-peering-connection-operator.fullname" . }}
+  name: {{ include "capa-vpc-peering-operator.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aws-peering-connection-operator.serviceAccountName" . }}
+    name: {{ include "capa-vpc-peering-operator.serviceAccountName" . }}
     namespace: {{ .Release.Namespace }}

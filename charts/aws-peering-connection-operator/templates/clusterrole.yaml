@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "aws-peering-connection-operator.fullname" . }}
+  name: {{ include "capa-vpc-peering-operator.fullname" . }}
 rules:
   - apiGroups: ["*"]
     resources: ["*"]

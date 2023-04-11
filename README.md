@@ -1,1 +1,1 @@
-# aws-peering-connection-operator
+# capa-vpc-peering-operator

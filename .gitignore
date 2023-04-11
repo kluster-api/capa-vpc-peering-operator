@@ -23,4 +23,5 @@ testbin/*
 *.swp
 *.swo
 *~
+/.go
 aws-credentials.txt

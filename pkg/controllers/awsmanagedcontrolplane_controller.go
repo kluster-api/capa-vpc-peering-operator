@@ -45,7 +45,7 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ct
 	managedCP := &eksapi.AWSManagedControlPlane{}
 
 	if err := r.Get(ctx, objKey, managedCP); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if managedCP.DeletionTimestamp != nil {

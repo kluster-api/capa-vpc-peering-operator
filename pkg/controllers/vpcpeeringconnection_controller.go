@@ -41,7 +41,7 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 	pc := &ec2api.VPCPeeringConnection{}
 
 	if err := r.Get(ctx, objKey, pc); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if pc.DeletionTimestamp != nil {

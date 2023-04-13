@@ -83,7 +83,7 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	var routeTableIDs []string
 	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-		if subnet.IsPublic == false {
+		if !subnet.IsPublic {
 			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
 		}
 	}

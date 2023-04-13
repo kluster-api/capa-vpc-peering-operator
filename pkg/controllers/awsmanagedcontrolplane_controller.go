@@ -52,7 +52,7 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, nil
 	}
 
-	if managedCP.Status.Ready != true {
+	if !managedCP.Status.Ready {
 		return ctrl.Result{}, nil
 	}
 
@@ -72,7 +72,7 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ct
 
 	var routeTableIDs []string
 	for _, subnet := range managedCP.Spec.NetworkSpec.Subnets {
-		if subnet.IsPublic == false {
+		if !subnet.IsPublic {
 			routeTableIDs = append(routeTableIDs, *subnet.RouteTableID)
 		}
 	}

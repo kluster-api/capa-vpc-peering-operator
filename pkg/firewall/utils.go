@@ -67,18 +67,6 @@ func GetSecurityGroupID(managedCP *ekscontrolplanev1.AWSManagedControlPlane) (st
 	return sg.ID, nil
 }
 
-func GetVpcIDs(ctx context.Context, c client.Client) []string {
-	pcLIst := &upEC2.VPCPeeringConnectionList{}
-	c.List(ctx, pcLIst)
-
-	var idList []string
-
-	for _, pc := range pcLIst.Items {
-		idList = append(idList, pc.GetID())
-	}
-	return idList
-}
-
 func CheckCrossplaneCondition(conditions []crossplanev1.Condition) bool {
 	for i := range conditions {
 		klog.Infof("condition status: %s", conditions[i].Status)

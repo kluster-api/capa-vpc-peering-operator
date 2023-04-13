@@ -23,7 +23,7 @@ import (
 	ec2api "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
-	cu "kmodules.xyz/client-go/client"
+	kmc "kmodules.xyz/client-go/client"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,8 +38,7 @@ type RouteInfo struct {
 }
 
 func GetRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ec2api.Route {
-	var route ec2api.Route
-	route = ec2api.Route{
+	route := ec2api.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
@@ -68,6 +67,9 @@ func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.Secur
 	}
 
 	fromPort, err := strconv.ParseFloat(ruleInfo.FromPort, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	protocol := "tcp"
 	typ := "ingress"
@@ -98,7 +100,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 		return err
 	}
 
-	_, _, err = cu.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
+	_, _, err = kmc.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
 		return sgRule
 	})
 	if err != nil {
@@ -110,7 +112,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 
 func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
 	route := GetRoute(info, ownerRef)
-	_, _, err := cu.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
+	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})
 	if err != nil {
@@ -124,22 +126,4 @@ func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo,
 
 type VPCIdentifier struct {
 	Name, Cidr string
-}
-
-func CheckCIDRConflict(ctx context.Context, c client.Client, ownVPC VPCIdentifier) error {
-	vpcs := []VPCIdentifier{ownVPC}
-	pcs := &ec2api.VPCPeeringConnectionList{}
-
-	err := c.List(ctx, pcs)
-	if err != nil {
-		return err
-	}
-
-	for _, pc := range pcs.Items {
-		if len(pc.Annotations[CidrAnnotation]) > 0 {
-			vpcs = append(vpcs, VPCIdentifier{Name: *pc.Spec.ForProvider.PeerVPCID, Cidr: pc.Annotations[CidrAnnotation]})
-		}
-	}
-
-	return nil
 }

@@ -37,10 +37,10 @@ type RouteInfo struct {
 	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
-func GetRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ec2api.Route {
+func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ec2api.Route {
 	route := ec2api.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
+			Name:            generateRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
 		},
 		Spec: ec2api.RouteSpec{
@@ -59,7 +59,7 @@ type RuleInfo struct {
 	DestinationCidr, Region, SecurityGroup, ToPort, FromPort string
 }
 
-func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.SecurityGroupRule, error) {
+func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.SecurityGroupRule, error) {
 	var rule ec2api.SecurityGroupRule
 	toPort, err := strconv.ParseFloat(ruleInfo.ToPort, 64)
 	if err != nil {
@@ -76,7 +76,7 @@ func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.Secur
 
 	rule = ec2api.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
+			Name:            generateRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
 			OwnerReferences: ownerRef,
 		},
 		Spec: ec2api.SecurityGroupRuleSpec{
@@ -94,8 +94,8 @@ func GetRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.Secur
 	return &rule, nil
 }
 
-func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
-	sgRule, err := GetRule(info, ownerRef)
+func CreateOrPatchRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
+	sgRule, err := getRule(info, ownerRef)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 	return nil
 }
 
-func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
-	route := GetRoute(info, ownerRef)
+func CreateOrPatchRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
+	route := getRoute(info, ownerRef)
 	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})

@@ -48,7 +48,7 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if !firewall.CheckCrossplaneCondition(pc.Status.Conditions) || len(pc.GetID()) == 0 {
+	if !firewall.IsConditionReady(pc.Status.Conditions) || len(pc.GetID()) == 0 {
 		klog.Infof("%s condition false", pc.GetID())
 		return ctrl.Result{}, errors.New(fmt.Sprintf("%s is not ready", pc.Name))
 	}
@@ -70,7 +70,7 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, errors.New("empty CIDR range in peering connection tags")
 	}
 
-	if err := firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{
+	if err := firewall.CreateOrPatchRule(ctx, r.Client, firewall.RuleInfo{
 		DestinationCidr: cidr,
 		Region:          managedCP.Spec.Region,
 		SecurityGroup:   sgID,
@@ -89,13 +89,12 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 	var retErr error
 	for _, tableID := range routeTableIDs {
-		if err := firewall.CreateRouteTableRoute(ctx, r.Client, firewall.RouteInfo{
+		if err := firewall.CreateOrPatchRoute(ctx, r.Client, firewall.RouteInfo{
 			RouteTable:          tableID,
 			Destination:         cidr,
 			Region:              managedCP.Spec.Region,
 			PeeringConnectionID: pc.GetID(),
 		}, firewall.GetOwnerReference(pc)); err != nil {
-			klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
 			retErr = errors.Wrap(retErr, err.Error())
 		}
 	}

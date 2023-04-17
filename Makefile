@@ -24,8 +24,7 @@ BIN      := capa-vpc-peering-operator
 COMPRESS ?= no
 
 # Where to push the docker image.
-#REGISTRY ?= ghcr.io/appscode
-REGISTRY ?= superm4n
+REGISTRY ?= ghcr.io/appscode
 SRC_REG  ?=
 
 # This version-strategy uses git tags to set the version string

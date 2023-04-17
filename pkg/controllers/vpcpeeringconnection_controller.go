@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/firewall"
 
@@ -26,8 +25,12 @@ import (
 	ec2api "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
+	cpv1beta1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // VPCPeeringConnectionReconciler reconciles a crossplane vpc peering connection object
@@ -50,7 +53,7 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	if !firewall.IsConditionReady(pc.Status.Conditions) || len(pc.GetID()) == 0 {
 		klog.Infof("%s condition false", pc.GetID())
-		return ctrl.Result{}, errors.New(fmt.Sprintf("%s is not ready", pc.Name))
+		return ctrl.Result{}, nil
 	}
 
 	klog.Infof("====================== %s is ready ====================", pc.GetID())
@@ -106,5 +109,22 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *VPCPeeringConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&ec2api.VPCPeeringConnection{}).
+		Watches(
+			&source.Kind{Type: &cpv1beta1.AWSManagedControlPlane{}},
+			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+				reconcileReq := make([]reconcile.Request, 0)
+				pcs := &ec2api.VPCPeeringConnectionList{}
+				err := r.List(context.TODO(), pcs)
+				if err != nil {
+					return reconcileReq
+				}
+
+				for _, pc := range pcs.Items {
+					reconcileReq = append(reconcileReq, reconcile.Request{NamespacedName: client.ObjectKey{Name: pc.Name, Namespace: pc.Namespace}})
+				}
+
+				return reconcileReq
+			}),
+		).
 		Complete(r)
 }

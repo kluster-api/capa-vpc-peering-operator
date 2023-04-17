@@ -1,0 +1,19 @@
+apiVersion: external-dns.appscode.com/v1alpha1
+kind: ExternalDNS
+metadata:
+  name: mg
+  namespace: demo
+spec:
+  source:
+    type:
+      group: ""
+      version: v1
+      kind: Node
+    node:
+      #labelFilter: kubernetes.io/hostname=ip-10-0-4-53.ec2.internal
+      fqdnTemplate: "{{.Name}}.superm4n.tk"
+  domainFilter:
+    - superm4n.tk
+  provider: aws
+  aws:
+    zoneType: public

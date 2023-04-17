@@ -123,7 +123,3 @@ func CreateOrPatchRoute(ctx context.Context, c client.Client, info RouteInfo, ow
 
 	return nil
 }
-
-type VPCIdentifier struct {
-	Name, Cidr string
-}

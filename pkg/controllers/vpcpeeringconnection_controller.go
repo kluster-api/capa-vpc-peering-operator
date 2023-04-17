@@ -39,7 +39,7 @@ type VPCPeeringConnectionReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	objKey := req.NamespacedName
 	pc := &ec2api.VPCPeeringConnection{}
 

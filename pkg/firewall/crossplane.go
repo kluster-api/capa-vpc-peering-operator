@@ -20,10 +20,10 @@ import (
 	"context"
 	"strconv"
 
-	ec2api "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	kmc "kmodules.xyz/client-go/client"
+	kfec2 "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,14 +37,14 @@ type RouteInfo struct {
 	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
-func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ec2api.Route {
-	route := ec2api.Route{
+func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *kfec2.Route {
+	route := kfec2.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            generateRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
 		},
-		Spec: ec2api.RouteSpec{
-			ForProvider: ec2api.RouteParameters_2{
+		Spec: kfec2.RouteSpec{
+			ForProvider: kfec2.RouteParameters_2{
 				Region:                 &routeInfo.Region,
 				RouteTableID:           &routeInfo.RouteTable,
 				DestinationCidrBlock:   &routeInfo.Destination,
@@ -59,8 +59,8 @@ type RuleInfo struct {
 	DestinationCidr, Region, SecurityGroup, ToPort, FromPort string
 }
 
-func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.SecurityGroupRule, error) {
-	var rule ec2api.SecurityGroupRule
+func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.SecurityGroupRule, error) {
+	var rule kfec2.SecurityGroupRule
 	toPort, err := strconv.ParseFloat(ruleInfo.ToPort, 64)
 	if err != nil {
 		return nil, err
@@ -74,13 +74,13 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ec2api.Secur
 	protocol := "tcp"
 	typ := "ingress"
 
-	rule = ec2api.SecurityGroupRule{
+	rule = kfec2.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            generateRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
 			OwnerReferences: ownerRef,
 		},
-		Spec: ec2api.SecurityGroupRuleSpec{
-			ForProvider: ec2api.SecurityGroupRuleParameters_2{
+		Spec: kfec2.SecurityGroupRuleSpec{
+			ForProvider: kfec2.SecurityGroupRuleParameters_2{
 				Region:          &ruleInfo.Region,
 				CidrBlocks:      []*string{&ruleInfo.DestinationCidr},
 				ToPort:          &toPort,

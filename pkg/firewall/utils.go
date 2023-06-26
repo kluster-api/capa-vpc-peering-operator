@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	crossplanev1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
-	upEC2 "github.com/upbound/provider-aws/apis/ec2/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kfec2 "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	infrav2 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,7 +75,7 @@ func IsConditionReady(conditions []crossplanev1.Condition) bool {
 	return true
 }
 
-func GetOwnerReference(pc *upEC2.VPCPeeringConnection) []metav1.OwnerReference {
+func GetOwnerReference(pc *kfec2.VPCPeeringConnection) []metav1.OwnerReference {
 	return []metav1.OwnerReference{
 		{
 			APIVersion: pc.APIVersion,

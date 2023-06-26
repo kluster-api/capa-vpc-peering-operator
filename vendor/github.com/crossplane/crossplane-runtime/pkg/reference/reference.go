@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package reference contains utilities for working with cross-resource
+// references.
 package reference
 
 import (
 	"context"
+	"strconv"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,12 +52,32 @@ func FromPtrValue(v *string) string {
 	return *v
 }
 
+// FromFloatPtrValue adapts a float pointer field for use as a CurrentValue.
+func FromFloatPtrValue(v *float64) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*v, 'f', 0, 64)
+}
+
 // ToPtrValue adapts a ResolvedValue for use as a string pointer field.
 func ToPtrValue(v string) *string {
 	if v == "" {
 		return nil
 	}
 	return &v
+}
+
+// ToFloatPtrValue adapts a ResolvedValue for use as a float64 pointer field.
+func ToFloatPtrValue(v string) *float64 {
+	if v == "" {
+		return nil
+	}
+	vParsed, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil
+	}
+	return &vParsed
 }
 
 // FromPtrValues adapts a slice of string pointer fields for use as CurrentValues.
@@ -71,6 +93,15 @@ func FromPtrValues(v []*string) []string {
 	return res
 }
 
+// FromFloatPtrValues adapts a slice of float64 pointer fields for use as CurrentValues.
+func FromFloatPtrValues(v []*float64) []string {
+	var res = make([]string, len(v))
+	for i := 0; i < len(v); i++ {
+		res[i] = FromFloatPtrValue(v[i])
+	}
+	return res
+}
+
 // ToPtrValues adapts ResolvedValues for use as a slice of string pointer fields.
 // NOTE: Do not use this utility function unless you have to.
 // Using pointer slices does not adhere to our current API practices.
@@ -80,6 +111,15 @@ func ToPtrValues(v []string) []*string {
 	var res = make([]*string, len(v))
 	for i := 0; i < len(v); i++ {
 		res[i] = ToPtrValue(v[i])
+	}
+	return res
+}
+
+// ToFloatPtrValues adapts ResolvedValues for use as a slice of float64 pointer fields.
+func ToFloatPtrValues(v []string) []*float64 {
+	var res = make([]*float64, len(v))
+	for i := 0; i < len(v); i++ {
+		res[i] = ToFloatPtrValue(v[i])
 	}
 	return res
 }
@@ -278,7 +318,7 @@ func (r *APIResolver) Resolve(ctx context.Context, req ResolutionRequest) (Resol
 // ResolveMultiple resolves the supplied MultiResolutionRequest. The returned
 // MultiResolutionResponse always contains valid values unless an error was
 // returned.
-func (r *APIResolver) ResolveMultiple(ctx context.Context, req MultiResolutionRequest) (MultiResolutionResponse, error) { // nolint: gocyclo
+func (r *APIResolver) ResolveMultiple(ctx context.Context, req MultiResolutionRequest) (MultiResolutionResponse, error) { //nolint: gocyclo // Only at 11.
 	// Return early if from is being deleted, or the request is a no-op.
 	if meta.WasDeleted(r.from) || req.IsNoOp() {
 		return MultiResolutionResponse{ResolvedValues: req.CurrentValues, ResolvedReferences: req.References}, nil

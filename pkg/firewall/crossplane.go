@@ -44,7 +44,7 @@ func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *kfec2.Rout
 			OwnerReferences: ownerRef,
 		},
 		Spec: kfec2.RouteSpec{
-			ForProvider: kfec2.RouteParameters_2{
+			ForProvider: kfec2.RouteParameters{
 				Region:                 &routeInfo.Region,
 				RouteTableID:           &routeInfo.RouteTable,
 				DestinationCidrBlock:   &routeInfo.Destination,
@@ -80,7 +80,7 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.Securi
 			OwnerReferences: ownerRef,
 		},
 		Spec: kfec2.SecurityGroupRuleSpec{
-			ForProvider: kfec2.SecurityGroupRuleParameters_2{
+			ForProvider: kfec2.SecurityGroupRuleParameters{
 				Region:          &ruleInfo.Region,
 				CidrBlocks:      []*string{&ruleInfo.DestinationCidr},
 				ToPort:          &toPort,

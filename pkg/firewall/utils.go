@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/klog/v2"
 	"strings"
 
 	crossplanev1 "github.com/crossplane/crossplane-runtime/apis/common/v1"

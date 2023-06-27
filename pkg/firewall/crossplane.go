@@ -95,7 +95,7 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.Securi
 }
 
 func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
-	sgRule, err := GetRule(info, ownerRef)
+	sgRule, err := getRule(info, ownerRef)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 }
 
 func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
-	route := GetRoute(info, ownerRef)
+	route := getRoute(info, ownerRef)
 	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})

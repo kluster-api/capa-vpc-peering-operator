@@ -40,7 +40,7 @@ type RouteInfo struct {
 func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *kfec2.Route {
 	route := kfec2.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            generateRouteName(routeInfo.RouteTable, routeInfo.Destination),
+			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
 		},
 		Spec: kfec2.RouteSpec{
@@ -76,7 +76,7 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.Securi
 
 	rule = kfec2.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            generateRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
+			Name:            GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
 			OwnerReferences: ownerRef,
 		},
 		Spec: kfec2.SecurityGroupRuleSpec{
@@ -94,8 +94,8 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.Securi
 	return &rule, nil
 }
 
-func CreateOrPatchRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
-	sgRule, err := getRule(info, ownerRef)
+func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo, ownerRef []metav1.OwnerReference) error {
+	sgRule, err := GetRule(info, ownerRef)
 	if err != nil {
 		return err
 	}
@@ -110,8 +110,8 @@ func CreateOrPatchRule(ctx context.Context, c client.Client, info RuleInfo, owne
 	return nil
 }
 
-func CreateOrPatchRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
-	route := getRoute(info, ownerRef)
+func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
+	route := GetRoute(info, ownerRef)
 	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})
@@ -122,4 +122,8 @@ func CreateOrPatchRoute(ctx context.Context, c client.Client, info RouteInfo, ow
 	klog.Infof("route created to table %s for %s", info.RouteTable, info.Destination)
 
 	return nil
+}
+
+type VPCIdentifier struct {
+	Name, Cidr string
 }

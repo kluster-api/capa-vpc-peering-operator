@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+
 	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/firewall"
 
 	"github.com/pkg/errors"
@@ -27,9 +29,6 @@ import (
 	cpv1beta1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // VPCPeeringConnectionReconciler reconciles a crossplane vpc peering connection object
@@ -38,7 +37,7 @@ type VPCPeeringConnectionReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-func (r *VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	objKey := req.NamespacedName
 	pc := &kfec2.VPCPeeringConnection{}
 
@@ -50,9 +49,9 @@ func (r *VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	if !firewall.IsConditionReady(pc.Status.Conditions) || len(pc.GetID()) == 0 {
+	if !firewall.CheckCrossplaneCondition(pc.Status.Conditions) || len(pc.GetID()) == 0 {
 		klog.Infof("%s condition false", pc.GetID())
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, errors.New(fmt.Sprintf("%s is not ready", pc.Name))
 	}
 
 	klog.Infof("====================== %s is ready ====================", pc.GetID())
@@ -72,7 +71,7 @@ func (r *VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, errors.New("empty CIDR range in peering connection tags")
 	}
 
-	if err := firewall.CreateOrPatchRule(ctx, r.Client, firewall.RuleInfo{
+	if err := firewall.CreateSecurityGroupRule(ctx, r.Client, firewall.RuleInfo{
 		DestinationCidr: cidr,
 		Region:          managedCP.Spec.Region,
 		SecurityGroup:   sgID,
@@ -91,12 +90,13 @@ func (r *VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 	var retErr error
 	for _, tableID := range routeTableIDs {
-		if err := firewall.CreateOrPatchRoute(ctx, r.Client, firewall.RouteInfo{
+		if err := firewall.CreateRouteTableRoute(ctx, r.Client, firewall.RouteInfo{
 			RouteTable:          tableID,
 			Destination:         cidr,
 			Region:              managedCP.Spec.Region,
 			PeeringConnectionID: pc.GetID(),
 		}, firewall.GetOwnerReference(pc)); err != nil {
+			klog.Errorf("failed to add route in %s for %s", tableID, pc.GetID())
 			retErr = errors.Wrap(retErr, err.Error())
 		}
 	}

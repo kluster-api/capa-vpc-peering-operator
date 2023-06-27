@@ -30,14 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func generateRouteName(routeTable, destination string) string {
+func GetRouteName(routeTable, destination string) string {
 	st := fmt.Sprintf("%s-%s", routeTable, destination)
 	st = strings.ReplaceAll(st, ".", "-")
 	st = strings.ReplaceAll(st, "/", "-")
 	return st
 }
 
-func generateRuleName(securityGroup, cidr string) string {
+func GetSGRuleName(securityGroup, cidr string) string {
 	st := fmt.Sprintf("%s-%s", securityGroup, cidr)
 	st = strings.ReplaceAll(st, ".", "-")
 	st = strings.ReplaceAll(st, "/", "-")
@@ -66,8 +66,9 @@ func GetSecurityGroupID(managedCP *ekscontrolplanev1.AWSManagedControlPlane) (st
 	return sg.ID, nil
 }
 
-func IsConditionReady(conditions []crossplanev1.Condition) bool {
+func CheckCrossplaneCondition(conditions []crossplanev1.Condition) bool {
 	for i := range conditions {
+		klog.Infof("condition status: %s", conditions[i].Status)
 		if conditions[i].Status != "True" {
 			return false
 		}

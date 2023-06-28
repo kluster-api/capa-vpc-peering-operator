@@ -22,11 +22,11 @@ import (
 
 	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/firewall"
 
-	ec2api "github.com/upbound/provider-aws/apis/ec2/v1beta1"
+	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	expapi "sigs.k8s.io/cluster-api-provider-aws/exp/api/v1beta1"
 	eksapi "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
+	expapi "sigs.k8s.io/cluster-api-provider-aws/v2/exp/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"

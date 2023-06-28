@@ -30,7 +30,7 @@ import (
 	"k8s.io/klog/v2/klogr"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clusterid"
-	kfec2 "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta1"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	capaExp "sigs.k8s.io/cluster-api-provider-aws/v2/exp/api/v1beta1"
@@ -46,7 +46,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrav1.AddToScheme(scheme))
-	utilruntime.Must(kfec2.AddToScheme(scheme))
+	utilruntime.Must(ec2api.AddToScheme(scheme))
 	utilruntime.Must(ekscontrolplanev1.AddToScheme(scheme))
 	utilruntime.Must(capaExp.AddToScheme(scheme))
 }

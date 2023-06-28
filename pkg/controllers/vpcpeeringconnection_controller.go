@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	kfec2 "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	cpv1beta1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +42,7 @@ type VPCPeeringConnectionReconciler struct {
 
 func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	objKey := req.NamespacedName
-	pc := &kfec2.VPCPeeringConnection{}
+	pc := &ec2api.VPCPeeringConnection{}
 
 	if err := r.Get(ctx, objKey, pc); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -110,12 +110,12 @@ func (r VPCPeeringConnectionReconciler) Reconcile(ctx context.Context, req ctrl.
 // SetupWithManager sets up the controller with the Manager.
 func (r *VPCPeeringConnectionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kfec2.VPCPeeringConnection{}).
+		For(&ec2api.VPCPeeringConnection{}).
 		Watches(
 			&source.Kind{Type: &cpv1beta1.AWSManagedControlPlane{}},
 			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 				reconcileReq := make([]reconcile.Request, 0)
-				pcs := &kfec2.VPCPeeringConnectionList{}
+				pcs := &ec2api.VPCPeeringConnectionList{}
 				err := r.List(context.TODO(), pcs)
 				if err != nil {
 					return reconcileReq

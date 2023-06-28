@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	kmc "kmodules.xyz/client-go/client"
-	kfec2 "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ecapi "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,14 +37,14 @@ type RouteInfo struct {
 	RouteTable, Destination, Region, PeeringConnectionID string
 }
 
-func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *kfec2.Route {
-	route := kfec2.Route{
+func getRoute(routeInfo RouteInfo, ownerRef []metav1.OwnerReference) *ecapi.Route {
+	route := ecapi.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            GetRouteName(routeInfo.RouteTable, routeInfo.Destination),
 			OwnerReferences: ownerRef,
 		},
-		Spec: kfec2.RouteSpec{
-			ForProvider: kfec2.RouteParameters{
+		Spec: ecapi.RouteSpec{
+			ForProvider: ecapi.RouteParameters{
 				Region:                 &routeInfo.Region,
 				RouteTableID:           &routeInfo.RouteTable,
 				DestinationCidrBlock:   &routeInfo.Destination,
@@ -59,8 +59,8 @@ type RuleInfo struct {
 	DestinationCidr, Region, SecurityGroup, ToPort, FromPort string
 }
 
-func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.SecurityGroupRule, error) {
-	var rule kfec2.SecurityGroupRule
+func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*ecapi.SecurityGroupRule, error) {
+	var rule ecapi.SecurityGroupRule
 	toPort, err := strconv.ParseFloat(ruleInfo.ToPort, 64)
 	if err != nil {
 		return nil, err
@@ -74,13 +74,13 @@ func getRule(ruleInfo RuleInfo, ownerRef []metav1.OwnerReference) (*kfec2.Securi
 	protocol := "tcp"
 	typ := "ingress"
 
-	rule = kfec2.SecurityGroupRule{
+	rule = ecapi.SecurityGroupRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            GetSGRuleName(ruleInfo.SecurityGroup, ruleInfo.DestinationCidr),
 			OwnerReferences: ownerRef,
 		},
-		Spec: kfec2.SecurityGroupRuleSpec{
-			ForProvider: kfec2.SecurityGroupRuleParameters{
+		Spec: ecapi.SecurityGroupRuleSpec{
+			ForProvider: ecapi.SecurityGroupRuleParameters{
 				Region:          &ruleInfo.Region,
 				CidrBlocks:      []*string{&ruleInfo.DestinationCidr},
 				ToPort:          &toPort,

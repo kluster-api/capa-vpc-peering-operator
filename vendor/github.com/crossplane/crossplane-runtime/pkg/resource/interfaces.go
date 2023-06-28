@@ -67,6 +67,12 @@ type ConnectionDetailsPublisherTo interface {
 	GetPublishConnectionDetailsTo() *xpv1.PublishConnectionDetailsTo
 }
 
+// A Manageable resource may specify a ManagementPolicy.
+type Manageable interface {
+	SetManagementPolicy(p xpv1.ManagementPolicy)
+	GetManagementPolicy() xpv1.ManagementPolicy
+}
+
 // An Orphanable resource may specify a DeletionPolicy.
 type Orphanable interface {
 	SetDeletionPolicy(p xpv1.DeletionPolicy)
@@ -121,6 +127,13 @@ type CompositionReferencer interface {
 type CompositionRevisionReferencer interface {
 	SetCompositionRevisionReference(*corev1.ObjectReference)
 	GetCompositionRevisionReference() *corev1.ObjectReference
+}
+
+// A CompositionRevisionSelector may reference a set of
+// composition revisions.
+type CompositionRevisionSelector interface {
+	SetCompositionRevisionSelector(selector *metav1.LabelSelector)
+	GetCompositionRevisionSelector() *metav1.LabelSelector
 }
 
 // A CompositionUpdater uses a composition, and may update which revision of
@@ -183,6 +196,7 @@ type Managed interface {
 	ProviderConfigReferencer
 	ConnectionSecretWriterTo
 	ConnectionDetailsPublisherTo
+	Manageable
 	Orphanable
 
 	Conditioned
@@ -228,6 +242,7 @@ type Composite interface {
 	CompositionReferencer
 	CompositionUpdater
 	CompositionRevisionReferencer
+	CompositionRevisionSelector
 	ComposedResourcesReferencer
 	EnvironmentConfigReferencer
 	ClaimReferencer
@@ -255,6 +270,7 @@ type CompositeClaim interface {
 	CompositionReferencer
 	CompositionUpdater
 	CompositionRevisionReferencer
+	CompositionRevisionSelector
 	CompositeResourceDeleter
 	CompositeResourceReferencer
 	LocalConnectionSecretWriterTo

@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
 	"github.com/crossplane/crossplane-runtime/pkg/reconciler/managed"
 	xpresource "github.com/crossplane/crossplane-runtime/pkg/resource"
@@ -104,6 +105,12 @@ type ExternalName struct {
 	// assigned by the provider, like AWS VPC where it gets vpc-21kn123 identifier
 	// and not let you name it.
 	DisableNameInitializer bool
+
+	// IdentifierFields are the fields that are used to construct external
+	// resource identifier. We need to know these fields no matter what the
+	// management policy is including the Observe Only, different from other
+	// (required) fields.
+	IdentifierFields []string
 }
 
 // References represents reference resolver configurations for the fields of a
@@ -219,6 +226,11 @@ func NewTagger(kube client.Client, fieldName string) *Tagger {
 
 // Initialize is a custom initializer for setting external tags
 func (t *Tagger) Initialize(ctx context.Context, mg xpresource.Managed) error {
+	if mg.GetManagementPolicy() == xpv1.ManagementObserveOnly {
+		// We don't want to add tags to the spec.forProvider if the resource is
+		// in ObserveOnly mode.
+		return nil
+	}
 	paved, err := fieldpath.PaveObject(mg)
 	if err != nil {
 		return err
@@ -301,4 +313,9 @@ type Resource struct {
 	// MetaResource is the metadata associated with the resource scraped from
 	// the Terraform registry.
 	MetaResource *registry.Resource
+
+	// Path is the resource path for the API server endpoint. It defaults to
+	// the plural name of the generated CRD. Overriding this sets both the
+	// path and the plural name for the generated CRD.
+	Path string
 }

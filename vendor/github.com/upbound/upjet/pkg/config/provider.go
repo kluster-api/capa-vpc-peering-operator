@@ -40,11 +40,15 @@ func (cc ResourceConfiguratorChain) Configure(r *Resource) {
 	}
 }
 
-// BasePackages keeps lists of base packages that needs to be registered as API
+// BasePackages keeps lists of packages that needs to be registered as API
 // and controllers. Typically, we expect to see ProviderConfig packages here.
+// These APIs and controllers belong to non-generated (manually maintained)
+// resources.
 type BasePackages struct {
 	APIVersion []string
-	Controller []string
+	// Deprecated: Use ControllerMap instead.
+	Controller    []string
+	ControllerMap map[string]string
 }
 
 // Provider holds configuration for a provider to be generated with Upjet.
@@ -70,6 +74,10 @@ type Provider struct {
 	// "github.com/upbound/provider-aws"
 	ModulePath string
 
+	// FeaturesPackage is the relative package patch for the features package to
+	// configure the features behind the feature gates.
+	FeaturesPackage string
+
 	// BasePackages keeps lists of base packages that needs to be registered as
 	// API and controllers. Typically, we expect to see ProviderConfig packages
 	// here.
@@ -84,6 +92,13 @@ type Provider struct {
 	// can add "aws_shield_protection_group$". To skip whole aws waf group, one
 	// can add "aws_waf.*" to the list.
 	SkipList []string
+
+	// MainTemplate is the template string to be used to render the
+	// provider subpackage main program. If this is set, the generated provider
+	// is broken up into subpackage families partitioned across the API groups.
+	// A monolithic provider is also generated to
+	// ensure backwards-compatibility.
+	MainTemplate string
 
 	// skippedResourceNames is a list of Terraform resource names
 	// available in the Terraform provider schema, but
@@ -169,6 +184,19 @@ func WithDefaultResourceOptions(opts ...ResourceOption) ProviderOption {
 func WithReferenceInjectors(refInjectors []ReferenceInjector) ProviderOption {
 	return func(p *Provider) {
 		p.refInjectors = refInjectors
+	}
+}
+
+// WithFeaturesPackage configures FeaturesPackage for this Provider.
+func WithFeaturesPackage(s string) ProviderOption {
+	return func(p *Provider) {
+		p.FeaturesPackage = s
+	}
+}
+
+func WithMainTemplate(template string) ProviderOption {
+	return func(p *Provider) {
+		p.MainTemplate = template
 	}
 }
 

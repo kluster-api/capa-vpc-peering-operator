@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
+	"text/template/parse"
 
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/fieldpath"
@@ -47,6 +48,8 @@ var (
 		GetIDFn:                 ExternalNameAsID,
 		DisableNameInitializer:  true,
 	}
+
+	parameterPattern = regexp.MustCompile(`{{\s*\.parameters\.([^\s}]+)\s*}}`)
 )
 
 // ParameterAsIdentifier uses the given field name in the arguments as the
@@ -60,6 +63,7 @@ func ParameterAsIdentifier(param string) ExternalName {
 		param,
 		param + "_prefix",
 	}
+	e.IdentifierFields = []string{param}
 	return e
 }
 
@@ -71,24 +75,49 @@ func ParameterAsIdentifier(param string) ExternalName {
 //	file. You can use TF registry documentation of given resource to
 //	see what's available.
 //
-// terraformProviderConfig: The Terraform configuration object of the provider. You can
+// setup.configuration: The Terraform configuration object of the provider. You can
 //
 //	take a look at the TF registry provider configuration object
 //	to see what's available. Not to be confused with ProviderConfig
 //	custom resource of the Crossplane provider.
 //
+// setup.client_metadata: The Terraform client metadata available for the provider,
+//
+//	such as the AWS account ID for the AWS provider.
+//
 // external_name: The value of external name annotation of the custom resource.
 //
 //	It is required to use this as part of the template.
 //
+// The following template functions are available:
+// ToLower: Converts the contents of the pipeline to lower-case
+// ToUpper: Converts the contents of the pipeline to upper-case
+// Please note that it's currently *not* possible to use
+// the template functions on the .external_name template variable.
 // Example usages:
-// TemplatedStringAsIdentifier("index_name", "/subscriptions/{{ .terraformProviderConfig.subscription }}/{{ .external_name }}")
-// TemplatedStringAsIdentifier("index.name", "/resource/{{ .external_name }}/static")
-// TemplatedStringAsIdentifier("index.name", "{{ .parameters.cluster_id }}:{{ .parameters.node_id }}:{{ .external_name }}")
+// TemplatedStringAsIdentifier("index_name", "/subscriptions/{{ .setup.configuration.subscription }}/{{ .external_name }}")
+// TemplatedStringAsIdentifier("index_name", "/resource/{{ .external_name }}/static")
+// TemplatedStringAsIdentifier("index_name", "{{ .parameters.cluster_id }}:{{ .parameters.node_id }}:{{ .external_name }}")
+// TemplatedStringAsIdentifier("", "arn:aws:network-firewall:{{ .setup.configuration.region }}:{{ .setup.client_metadata.account_id }}:{{ .parameters.type | ToLower }}-rulegroup/{{ .external_name }}")
 func TemplatedStringAsIdentifier(nameFieldPath, tmpl string) ExternalName {
-	t, err := template.New("getid").Parse(tmpl)
+	t, err := template.New("getid").Funcs(template.FuncMap{
+		"ToLower": strings.ToLower,
+		"ToUpper": strings.ToUpper,
+	}).Parse(tmpl)
 	if err != nil {
 		panic(errors.Wrap(err, "cannot parse template"))
+	}
+
+	// Note(turkenh): If a parameter is used in the external name template,
+	// it is an identifier field.
+	var identifierFields []string
+	for _, node := range t.Root.Nodes {
+		if node.Type() == parse.NodeAction {
+			match := parameterPattern.FindStringSubmatch(node.String())
+			if len(match) == 2 {
+				identifierFields = append(identifierFields, match[1])
+			}
+		}
 	}
 	return ExternalName{
 		SetIdentifierArgumentFn: func(base map[string]any, externalName string) {
@@ -126,6 +155,7 @@ func TemplatedStringAsIdentifier(nameFieldPath, tmpl string) ExternalName {
 			}
 			return GetExternalNameFromTemplated(tmpl, id.(string))
 		},
+		IdentifierFields: identifierFields,
 	}
 }
 

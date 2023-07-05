@@ -30,7 +30,7 @@ import (
 const (
 	FirstPort      = "0"
 	LastPort       = "65535"
-	CidrAnnotation = "aws.upbound.io/peer-vpc-cidr"
+	CidrAnnotation = "aws.kubeform.com/peer-vpc-cidr"
 )
 
 type RouteInfo struct {

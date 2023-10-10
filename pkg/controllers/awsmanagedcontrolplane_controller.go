@@ -26,12 +26,8 @@ import (
 	"k8s.io/klog/v2"
 	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
 	eksapi "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
-	expapi "sigs.k8s.io/cluster-api-provider-aws/v2/exp/api/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // AWSManagedControlPlaneReconciler reconciles a Crossplane object
@@ -119,17 +115,5 @@ func (r *AWSManagedControlPlaneReconciler) Reconcile(ctx context.Context, req ct
 func (r *AWSManagedControlPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&eksapi.AWSManagedControlPlane{}).
-		Watches(
-			&source.Kind{Type: &expapi.AWSManagedMachinePool{}},
-			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-				reconcileReq := make([]reconcile.Request, 0)
-				managedCP, err := firewall.GetManagedControlPlane(context.TODO(), r.Client)
-				if err != nil {
-					return reconcileReq
-				}
-				reconcileReq = append(reconcileReq, reconcile.Request{NamespacedName: client.ObjectKey{Name: managedCP.Name, Namespace: managedCP.Namespace}})
-				return reconcileReq
-			}),
-		).
 		Complete(r)
 }

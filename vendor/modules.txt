@@ -936,7 +936,6 @@ sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta1
 sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2
 sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1
 sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta2
-sigs.k8s.io/cluster-api-provider-aws/v2/exp/api/v1beta1
 sigs.k8s.io/cluster-api-provider-aws/v2/exp/api/v1beta2
 sigs.k8s.io/cluster-api-provider-aws/v2/feature
 sigs.k8s.io/cluster-api-provider-aws/v2/iam/api/v1beta1

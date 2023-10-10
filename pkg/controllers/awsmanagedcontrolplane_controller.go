@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 
-	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/firewall"
+	"go.klusters.dev/capa-vpc-peering-operator/pkg/firewall"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"

@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/firewall"
+	"go.klusters.dev/capa-vpc-peering-operator/pkg/firewall"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"

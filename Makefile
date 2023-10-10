@@ -18,7 +18,7 @@ PRODUCT_OWNER_NAME := appscode
 PRODUCT_NAME       := capa-vpc-peering-operator
 ENFORCE_LICENSE    ?=
 
-GO_PKG   := go.bytebuilders.dev
+GO_PKG   := go.klusters.dev
 REPO     := $(notdir $(shell pwd))
 BIN      := capa-vpc-peering-operator
 COMPRESS ?= no

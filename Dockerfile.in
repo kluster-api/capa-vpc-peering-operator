@@ -14,7 +14,7 @@
 
 FROM {ARG_FROM}
 
-LABEL org.opencontainers.image.source https://github.com/bytebuilders/capa-vpc-peering-operator
+LABEL org.opencontainers.image.source https://github.com/kluster-api/capa-vpc-peering-operator
 
 RUN set -x \
   && apk add --update --upgrade --no-cache pcre2 ca-certificates tzdata \

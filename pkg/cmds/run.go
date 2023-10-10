@@ -19,7 +19,7 @@ package cmds
 import (
 	"os"
 
-	"go.bytebuilders.dev/capa-vpc-peering-operator/pkg/controllers"
+	"go.klusters.dev/capa-vpc-peering-operator/pkg/controllers"
 
 	"github.com/spf13/cobra"
 	v "gomodules.xyz/x/version"

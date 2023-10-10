@@ -16,7 +16,7 @@ FROM ghcr.io/appscode/dlv:1.20.1
 
 FROM {ARG_FROM}
 
-LABEL org.opencontainers.image.source https://github.com/bytebuilders/capa-vpc-peering-operator
+LABEL org.opencontainers.image.source https://github.com/kluster-api/capa-vpc-peering-operator
 
 RUN set -x \
   && apt-get update \

@@ -29,6 +29,7 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
 	"sigs.k8s.io/cluster-api-provider-aws/v2/pkg/eks"
@@ -73,7 +74,7 @@ func parseEKSVersion(raw string) (*version.Version, error) {
 }
 
 // ValidateCreate will do any extra validation when creating a AWSManagedControlPlane.
-func (r *AWSManagedControlPlane) ValidateCreate() error {
+func (r *AWSManagedControlPlane) ValidateCreate() (admission.Warnings, error) {
 	mcpLog.Info("AWSManagedControlPlane validate create", "control-plane", klog.KObj(r))
 
 	var allErrs field.ErrorList
@@ -94,10 +95,10 @@ func (r *AWSManagedControlPlane) ValidateCreate() error {
 	allErrs = append(allErrs, r.validateNetwork()...)
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(
+	return nil, apierrors.NewInvalid(
 		r.GroupVersionKind().GroupKind(),
 		r.Name,
 		allErrs,
@@ -105,11 +106,11 @@ func (r *AWSManagedControlPlane) ValidateCreate() error {
 }
 
 // ValidateUpdate will do any extra validation when updating a AWSManagedControlPlane.
-func (r *AWSManagedControlPlane) ValidateUpdate(old runtime.Object) error {
+func (r *AWSManagedControlPlane) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	mcpLog.Info("AWSManagedControlPlane validate update", "control-plane", klog.KObj(r))
 	oldAWSManagedControlplane, ok := old.(*AWSManagedControlPlane)
 	if !ok {
-		return apierrors.NewInvalid(GroupVersion.WithKind("AWSManagedControlPlane").GroupKind(), r.Name, field.ErrorList{
+		return nil, apierrors.NewInvalid(GroupVersion.WithKind("AWSManagedControlPlane").GroupKind(), r.Name, field.ErrorList{
 			field.InternalError(nil, errors.New("failed to convert old AWSManagedControlPlane to object")),
 		})
 	}
@@ -164,10 +165,10 @@ func (r *AWSManagedControlPlane) ValidateUpdate(old runtime.Object) error {
 	}
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(
+	return nil, apierrors.NewInvalid(
 		r.GroupVersionKind().GroupKind(),
 		r.Name,
 		allErrs,
@@ -175,10 +176,10 @@ func (r *AWSManagedControlPlane) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete allows you to add any extra validation when deleting.
-func (r *AWSManagedControlPlane) ValidateDelete() error {
+func (r *AWSManagedControlPlane) ValidateDelete() (admission.Warnings, error) {
 	mcpLog.Info("AWSManagedControlPlane validate delete", "control-plane", klog.KObj(r))
 
-	return nil
+	return nil, nil
 }
 
 func (r *AWSManagedControlPlane) validateEKSClusterName() field.ErrorList {
@@ -394,6 +395,21 @@ func (r *AWSManagedControlPlane) validateNetwork() field.ErrorList {
 	if r.Spec.NetworkSpec.VPC.IsIPv6Enabled() && r.Spec.NetworkSpec.VPC.IPv6.CidrBlock != "" && r.Spec.NetworkSpec.VPC.IPv6.PoolID == "" {
 		poolField := field.NewPath("spec", "networkSpec", "vpc", "ipv6", "poolId")
 		allErrs = append(allErrs, field.Invalid(poolField, r.Spec.NetworkSpec.VPC.IPv6.PoolID, "poolId cannot be empty if cidrBlock is set"))
+	}
+
+	if r.Spec.NetworkSpec.VPC.IsIPv6Enabled() && r.Spec.NetworkSpec.VPC.IPv6.PoolID != "" && r.Spec.NetworkSpec.VPC.IPv6.IPAMPool != nil {
+		poolField := field.NewPath("spec", "networkSpec", "vpc", "ipv6", "poolId")
+		allErrs = append(allErrs, field.Invalid(poolField, r.Spec.NetworkSpec.VPC.IPv6.PoolID, "poolId and ipamPool cannot be used together"))
+	}
+
+	if r.Spec.NetworkSpec.VPC.IsIPv6Enabled() && r.Spec.NetworkSpec.VPC.IPv6.CidrBlock != "" && r.Spec.NetworkSpec.VPC.IPv6.IPAMPool != nil {
+		cidrBlockField := field.NewPath("spec", "networkSpec", "vpc", "ipv6", "cidrBlock")
+		allErrs = append(allErrs, field.Invalid(cidrBlockField, r.Spec.NetworkSpec.VPC.IPv6.CidrBlock, "cidrBlock and ipamPool cannot be used together"))
+	}
+
+	if r.Spec.NetworkSpec.VPC.IsIPv6Enabled() && r.Spec.NetworkSpec.VPC.IPv6.IPAMPool != nil && r.Spec.NetworkSpec.VPC.IPv6.IPAMPool.ID == "" && r.Spec.NetworkSpec.VPC.IPv6.IPAMPool.Name == "" {
+		ipamPoolField := field.NewPath("spec", "networkSpec", "vpc", "ipv6", "ipamPool")
+		allErrs = append(allErrs, field.Invalid(ipamPoolField, r.Spec.NetworkSpec.VPC.IPv6.IPAMPool, "ipamPool must have either id or name"))
 	}
 
 	return allErrs

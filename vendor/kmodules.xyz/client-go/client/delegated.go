@@ -86,6 +86,16 @@ type delegatingClient struct {
 	mapper meta.RESTMapper
 }
 
+// GroupVersionKindFor returns the GroupVersionKind for the given object.
+func (d *delegatingClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return apiutil.GVKForObject(obj, d.scheme)
+}
+
+// IsObjectNamespaced returns true if the GroupVersionKind of the object is namespaced.
+func (d *delegatingClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return apiutil.IsObjectNamespaced(obj, d.scheme, d.mapper)
+}
+
 // Scheme returns the scheme this client is using.
 func (d *delegatingClient) Scheme() *runtime.Scheme {
 	return d.scheme

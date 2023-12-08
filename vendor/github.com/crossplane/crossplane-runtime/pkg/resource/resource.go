@@ -18,6 +18,8 @@ package resource
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -79,35 +81,6 @@ type LocalConnectionSecretOwner interface {
 
 	LocalConnectionSecretWriterTo
 	ConnectionDetailsPublisherTo
-}
-
-// A ConnectionPropagator is responsible for propagating information required to
-// connect to a resource.
-// Deprecated: This functionality will be removed soon.
-type ConnectionPropagator interface {
-	PropagateConnection(ctx context.Context, to LocalConnectionSecretOwner, from ConnectionSecretOwner) error
-}
-
-// A ConnectionPropagatorFn is a function that satisfies the
-// ConnectionPropagator interface.
-type ConnectionPropagatorFn func(ctx context.Context, to LocalConnectionSecretOwner, from ConnectionSecretOwner) error
-
-// A ManagedConnectionPropagator is responsible for propagating information
-// required to connect to a managed resource (for example the connection secret)
-// from the managed resource to a target.
-// Deprecated: This functionality will be removed soon.
-type ManagedConnectionPropagator interface {
-	PropagateConnection(ctx context.Context, o LocalConnectionSecretOwner, mg Managed) error
-}
-
-// A ManagedConnectionPropagatorFn is a function that satisfies the
-// ManagedConnectionPropagator interface.
-type ManagedConnectionPropagatorFn func(ctx context.Context, o LocalConnectionSecretOwner, mg Managed) error
-
-// PropagateConnection information from the supplied managed resource to the
-// supplied resource claim.
-func (fn ManagedConnectionPropagatorFn) PropagateConnection(ctx context.Context, o LocalConnectionSecretOwner, mg Managed) error {
-	return fn(ctx, o, mg)
 }
 
 // LocalConnectionSecretFor creates a connection secret in the namespace of the
@@ -390,12 +363,14 @@ func AllowUpdateIf(fn func(current, desired runtime.Object) bool) ApplyOption {
 	}
 }
 
-// Apply changes to the supplied object. The object will be created if it does
-// not exist, or patched if it does.
-//
-// Deprecated: use APIPatchingApplicator instead.
-func Apply(ctx context.Context, c client.Client, o client.Object, ao ...ApplyOption) error {
-	return NewAPIPatchingApplicator(c).Apply(ctx, o, ao...)
+// StoreCurrentRV stores the resource version of the current object in the
+// supplied string pointer. This is useful to detect whether the Apply call
+// was a no-op.
+func StoreCurrentRV(origRV *string) ApplyOption {
+	return func(_ context.Context, current, desired runtime.Object) error {
+		*origRV = current.(client.Object).GetResourceVersion()
+		return nil
+	}
 }
 
 // GetExternalTags returns the identifying tags to be used to tag the external
@@ -406,13 +381,37 @@ func GetExternalTags(mg Managed) map[string]string {
 		ExternalResourceTagKeyName: mg.GetName(),
 	}
 
-	switch {
-	case mg.GetProviderConfigReference() != nil && mg.GetProviderConfigReference().Name != "":
+	if mg.GetProviderConfigReference() != nil && mg.GetProviderConfigReference().Name != "" {
 		tags[ExternalResourceTagKeyProvider] = mg.GetProviderConfigReference().Name
-	// TODO(muvaf): Remove the branch once Provider type has been removed from
-	// everywhere.
-	case mg.GetProviderReference() != nil && mg.GetProviderReference().Name != "":
-		tags[ExternalResourceTagKeyProvider] = mg.GetProviderReference().Name
 	}
 	return tags
+}
+
+// DefaultFirstN is the default number of names to return in FirstNAndSomeMore.
+const DefaultFirstN = 3
+
+// FirstNAndSomeMore returns a string that contains the first n names in the
+// supplied slice, followed by ", and <count> more" if there are more than n.
+// The slice is not sorted, i.e. the caller must make sure the order is stable
+// e.g. when using this in conditions.
+func FirstNAndSomeMore(n int, names []string) string {
+	if n <= 0 {
+		return fmt.Sprintf("%d", len(names))
+	}
+	if len(names) > n {
+		return fmt.Sprintf("%s, and %d more", strings.Join(names[:n], ", "), len(names)-n)
+	}
+	if len(names) == n {
+		return fmt.Sprintf("%s, and %s", strings.Join(names[:n-1], ", "), names[n-1])
+	}
+	return strings.Join(names, ", ")
+}
+
+// StableNAndSomeMore is like FirstNAndSomeMore, but sorts the names before.
+// The input slice is not modified.
+func StableNAndSomeMore(n int, names []string) string {
+	cpy := make([]string, len(names))
+	copy(cpy, names)
+	sort.Strings(cpy)
+	return FirstNAndSomeMore(n, cpy)
 }

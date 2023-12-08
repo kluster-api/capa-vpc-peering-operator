@@ -24,7 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ec2api "kubedb.dev/provider-aws/apis/ec2/v1alpha1"
 	eksapi "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

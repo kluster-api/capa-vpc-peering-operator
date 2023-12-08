@@ -22,12 +22,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
 	"github.com/crossplane/crossplane-runtime/pkg/errors"
 	"github.com/crossplane/crossplane-runtime/pkg/meta"
 	"github.com/crossplane/crossplane-runtime/pkg/resource"
@@ -58,26 +58,6 @@ func (a *NameAsExternalName) Initialize(ctx context.Context, mg resource.Managed
 		return nil
 	}
 	meta.SetExternalName(mg, mg.GetName())
-	return errors.Wrap(a.client.Update(ctx, mg), errUpdateManaged)
-}
-
-// DefaultProviderConfig fills the ProviderConfigRef with `default` if it's left
-// empty.
-// Deprecated: Use OpenAPI schema defaulting instead.
-type DefaultProviderConfig struct{ client client.Client }
-
-// NewDefaultProviderConfig returns a new DefaultProviderConfig.
-// Deprecated: Use OpenAPI schema defaulting instead.
-func NewDefaultProviderConfig(c client.Client) *DefaultProviderConfig {
-	return &DefaultProviderConfig{client: c}
-}
-
-// Initialize the given managed resource.
-func (a *DefaultProviderConfig) Initialize(ctx context.Context, mg resource.Managed) error {
-	if mg.GetProviderConfigReference() != nil {
-		return nil
-	}
-	mg.SetProviderConfigReference(&xpv1.Reference{Name: "default"})
 	return errors.Wrap(a.client.Update(ctx, mg), errUpdateManaged)
 }
 
@@ -188,18 +168,21 @@ func NewRetryingCriticalAnnotationUpdater(c client.Client) *RetryingCriticalAnno
 
 // UpdateCriticalAnnotations updates (i.e. persists) the annotations of the
 // supplied Object. It retries in the face of any API server error several times
-// in order to ensure annotations that contain critical state are persisted. Any
-// pending changes to the supplied Object's spec, status, or other metadata are
-// reset to their current state according to the API server.
+// in order to ensure annotations that contain critical state are persisted.
+// Pending changes to the supplied Object's spec, status, or other metadata
+// might get reset to their current state according to the API server, e.g. in
+// case of a conflict error.
 func (u *RetryingCriticalAnnotationUpdater) UpdateCriticalAnnotations(ctx context.Context, o client.Object) error {
 	a := o.GetAnnotations()
 	err := retry.OnError(retry.DefaultRetry, resource.IsAPIError, func() error {
-		nn := types.NamespacedName{Name: o.GetName()}
-		if err := u.client.Get(ctx, nn, o); err != nil {
-			return err
+		err := u.client.Update(ctx, o)
+		if kerrors.IsConflict(err) {
+			if getErr := u.client.Get(ctx, types.NamespacedName{Name: o.GetName()}, o); getErr != nil {
+				return getErr
+			}
+			meta.AddAnnotations(o, a)
 		}
-		meta.AddAnnotations(o, a)
-		return u.client.Update(ctx, o)
+		return err
 	})
 	return errors.Wrap(err, errUpdateCriticalAnnotations)
 }

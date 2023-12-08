@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	xpv1 "github.com/crossplane/crossplane-runtime/apis/common/v1"
+	"github.com/crossplane/crossplane-runtime/pkg/resource/unstructured/claim"
 )
 
 // A Conditioned may have conditions set or retrieved. Conditions are typically
@@ -36,8 +37,8 @@ type Conditioned interface {
 
 // A ClaimReferencer may reference a resource claim.
 type ClaimReferencer interface {
-	SetClaimReference(r *corev1.ObjectReference)
-	GetClaimReference() *corev1.ObjectReference
+	SetClaimReference(r *claim.Reference)
+	GetClaimReference() *claim.Reference
 }
 
 // A ManagedResourceReferencer may reference a concrete managed resource.
@@ -67,22 +68,16 @@ type ConnectionDetailsPublisherTo interface {
 	GetPublishConnectionDetailsTo() *xpv1.PublishConnectionDetailsTo
 }
 
-// A Manageable resource may specify a ManagementPolicy.
+// A Manageable resource may specify a ManagementPolicies.
 type Manageable interface {
-	SetManagementPolicy(p xpv1.ManagementPolicy)
-	GetManagementPolicy() xpv1.ManagementPolicy
+	SetManagementPolicies(p xpv1.ManagementPolicies)
+	GetManagementPolicies() xpv1.ManagementPolicies
 }
 
 // An Orphanable resource may specify a DeletionPolicy.
 type Orphanable interface {
 	SetDeletionPolicy(p xpv1.DeletionPolicy)
 	GetDeletionPolicy() xpv1.DeletionPolicy
-}
-
-// A ProviderReferencer may reference a provider resource.
-type ProviderReferencer interface {
-	GetProviderReference() *xpv1.Reference
-	SetProviderReference(p *xpv1.Reference)
 }
 
 // A ProviderConfigReferencer may reference a provider config resource.
@@ -192,7 +187,6 @@ type Object interface {
 type Managed interface {
 	Object
 
-	ProviderReferencer
 	ProviderConfigReferencer
 	ConnectionSecretWriterTo
 	ConnectionDetailsPublisherTo

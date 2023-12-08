@@ -245,11 +245,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*apiv1beta2.NetworkSpec)(nil), (*apiv1beta1.NetworkSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta2_NetworkSpec_To_v1beta1_NetworkSpec(a.(*apiv1beta2.NetworkSpec), b.(*apiv1beta1.NetworkSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddConversionFunc((*v1beta2.VpcCni)(nil), (*VpcCni)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta2_VpcCni_To_v1beta1_VpcCni(a.(*v1beta2.VpcCni), b.(*VpcCni), scope)
 	}); err != nil {
@@ -455,6 +450,7 @@ func Convert_v1beta2_AWSManagedControlPlaneStatus_To_v1beta1_AWSManagedControlPl
 func autoConvert_v1beta1_Addon_To_v1beta2_Addon(in *Addon, out *v1beta2.Addon, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Version = in.Version
+	out.Configuration = in.Configuration
 	out.ConflictResolution = (*v1beta2.AddonResolution)(unsafe.Pointer(in.ConflictResolution))
 	out.ServiceAccountRoleArn = (*string)(unsafe.Pointer(in.ServiceAccountRoleArn))
 	return nil
@@ -468,6 +464,7 @@ func Convert_v1beta1_Addon_To_v1beta2_Addon(in *Addon, out *v1beta2.Addon, s con
 func autoConvert_v1beta2_Addon_To_v1beta1_Addon(in *v1beta2.Addon, out *Addon, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Version = in.Version
+	out.Configuration = in.Configuration
 	out.ConflictResolution = (*AddonResolution)(unsafe.Pointer(in.ConflictResolution))
 	out.ServiceAccountRoleArn = (*string)(unsafe.Pointer(in.ServiceAccountRoleArn))
 	return nil

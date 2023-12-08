@@ -23,14 +23,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	kmc "kmodules.xyz/client-go/client"
-	ecapi "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ecapi "kubedb.dev/provider-aws/apis/ec2/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	FirstPort      = "0"
 	LastPort       = "65535"
-	CidrAnnotation = "aws.kubeform.com/peer-vpc-cidr"
+	CidrAnnotation = "aws.kubedb.com/peer-vpc-cidr"
 )
 
 type RouteInfo struct {
@@ -100,7 +100,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 		return err
 	}
 
-	_, _, err = kmc.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
+	_, err = kmc.CreateOrPatch(ctx, c, sgRule, func(_ client.Object, _ bool) client.Object {
 		return sgRule
 	})
 	if err != nil {
@@ -112,7 +112,7 @@ func CreateSecurityGroupRule(ctx context.Context, c client.Client, info RuleInfo
 
 func CreateRouteTableRoute(ctx context.Context, c client.Client, info RouteInfo, ownerRef []metav1.OwnerReference) error {
 	route := getRoute(info, ownerRef)
-	_, _, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
+	_, err := kmc.CreateOrPatch(ctx, c, route, func(_ client.Object, _ bool) client.Object {
 		return route
 	})
 	if err != nil {

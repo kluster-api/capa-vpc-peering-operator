@@ -30,11 +30,12 @@ import (
 	"k8s.io/klog/v2/klogr"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clusterid"
-	ec2api "kubeform.dev/provider-aws/apis/ec2/v1alpha1"
+	ec2api "kubedb.dev/provider-aws/apis/ec2/v1alpha1"
 	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta1"
 	ekscontrolplanev1 "sigs.k8s.io/cluster-api-provider-aws/v2/controlplane/eks/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 var (
@@ -72,9 +73,13 @@ func NewCmdRun() *cobra.Command {
 			cfg.Burst = Burst
 
 			mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-				Scheme:                 scheme,
-				MetricsBindAddress:     metricsAddr,
-				Port:                   9443,
+				Scheme: scheme,
+				Metrics: metricsserver.Options{
+					BindAddress: metricsAddr,
+				},
+				//WebhookServer: webhook.NewServer(webhook.Options{
+				//	Port: 9443,
+				//}),
 				HealthProbeBindAddress: probeAddr,
 				LeaderElection:         enableLeaderElection,
 				LeaderElectionID:       "5e9b627f.appscode.com",

@@ -427,7 +427,7 @@ go.uber.org/zap/zapcore
 # golang.org/x/crypto v0.15.0
 ## explicit; go 1.18
 golang.org/x/crypto/blake2b
-# golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+# golang.org/x/exp v0.0.0-20231006140011-7918f672742d => golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 ## explicit; go 1.20
 golang.org/x/exp/maps
 # golang.org/x/net v0.17.0
@@ -938,7 +938,7 @@ kmodules.xyz/client-go/client/apiutil
 kmodules.xyz/client-go/core/v1
 kmodules.xyz/client-go/meta
 kmodules.xyz/client-go/tools/clusterid
-# kubedb.dev/provider-aws v0.0.2-0.20231208054851-84dde98d441f
+# kubedb.dev/provider-aws v0.0.2
 ## explicit; go 1.19
 kubedb.dev/provider-aws/apis/ec2/v1alpha1
 # sigs.k8s.io/cluster-api v1.5.3
@@ -1029,3 +1029,5 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
+# golang.org/x/exp => golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+# github.com/hashicorp/terraform-provider-aws => github.com/upbound/terraform-provider-aws v0.0.0-20231026091456-f2d38ee240d7

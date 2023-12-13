@@ -1,8 +1,6 @@
 module go.klusters.dev/capa-vpc-peering-operator
 
-go 1.21.3
-
-toolchain go1.21.5
+go 1.21.5
 
 require (
 	github.com/crossplane/crossplane-runtime v1.14.1
@@ -17,7 +15,7 @@ require (
 	k8s.io/client-go v0.29.0-alpha.3
 	k8s.io/klog/v2 v2.110.1
 	kmodules.xyz/client-go v0.25.42-0.20231121192837-1d2c1c73f083
-	kubedb.dev/provider-aws v0.0.2-0.20231208054851-84dde98d441f
+	kubedb.dev/provider-aws v0.0.2
 	sigs.k8s.io/cluster-api-provider-aws/v2 v2.3.0
 	sigs.k8s.io/controller-runtime v0.16.3
 )
@@ -139,3 +137,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
+
+replace golang.org/x/exp => golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+
+replace github.com/hashicorp/terraform-provider-aws => github.com/upbound/terraform-provider-aws v0.0.0-20231026091456-f2d38ee240d7

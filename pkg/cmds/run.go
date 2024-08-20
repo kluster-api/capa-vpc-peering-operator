@@ -27,7 +27,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clusterid"
 	ec2api "kubedb.dev/provider-aws/apis/ec2/v1alpha1"
@@ -66,7 +65,7 @@ func NewCmdRun() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			klog.Infof("Starting binary version %s+%s ...", v.Version.Version, v.Version.CommitHash)
 
-			ctrl.SetLogger(klogr.New())
+			ctrl.SetLogger(klog.NewKlogr())
 
 			cfg := ctrl.GetConfigOrDie()
 			cfg.QPS = QPS
